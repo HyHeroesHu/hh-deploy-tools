@@ -101,6 +101,11 @@ runs:
         IMAGE_NAME=${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}
         docker build -t $IMAGE_NAME:${{ github.ref_name }}-${{ env.TIMESTAMP }} -f ./Dockerfile .
         docker push $IMAGE_NAME:${{ github.ref_name }}-${{ env.TIMESTAMP }}
+
+    # Step 9: Set output value
+    - name: Set output value
+      run: echo "version-timestamp=${{ env.TIMESTAMP }}" >> $GITHUB_OUTPUT
+      shell: bash
     
     ##
     ## Conditional Discord notifications about finish
