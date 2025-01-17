@@ -1,0 +1,45 @@
+# Ignore Node.js dependencies
+node_modules/
+
+# Ignore build artifacts (for actions that build)
+dist/
+build/
+
+# Ignore IDE/editor settings
+.vscode/
+.idea/
+
+# Ignore temporary files (e.g., OS-specific)
+*.swp
+*.bak
+Thumbs.db
+.DS_Store
+
+# Ignore action test logs
+*.log
+
+# Ignore GitHub Action run metadata
+.github/workflows/*.yml
+
+# Ignore .env or config files that contain secrets
+.env
+config/.env
+
+# Ignore any other configuration or credentials
+*.pem
+*.key
+
+# Ignore any files related to Docker if using
+Dockerfile*
+docker-compose.yml
+
+# Ignore generated files (if applicable)
+*.tar
+*.tgz
+
+# Ignore package-lock or yarn.lock if you don't want to lock versions
+package-lock.json
+yarn.lock
+
+# Ignore GitHub Actions' workflow outputs or caches
+.github/actions/*/.github
