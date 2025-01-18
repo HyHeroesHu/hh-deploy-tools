@@ -30,7 +30,7 @@ inputs:
 outputs:
   version-timestamp:
     description: "The used timestamp for versioning the Docker image."
-    value: ${{ env.TIMESTAMP }}
+    value: ${{ steps.set_timestamp.outputs.timestamp }}
 
 runs:
   using: "composite"
@@ -89,14 +89,12 @@ runs:
     - name: Set dynamic global environment variable
       id: set_timestamp
       shell: bash
-        #echo "::set-output name=timestamp::$TIMESTAMP"
       run: |
         export TZ="Europe/Budapest"
         TIMESTAMP=$(date +"%Y%m%d%H%M%S")
         echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
         echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
-      env:
-        TIMESTAMP: ${{ env.TIMESTAMP }}
+        echo "::set-output name=timestamp::$TIMESTAMP"
     
     # Step 8: Build and push Docker image
     - name: Build and Push Docker Image
