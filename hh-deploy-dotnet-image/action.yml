@@ -40,6 +40,7 @@ runs:
   using: "composite"
   steps:
     - name: Get Current Timestamp
+      shell: bash
       id: timestampPublishStarted
       run: |
         export TZ="Europe/Budapest"
@@ -90,6 +91,7 @@ runs:
     ##
     - name: Get Current Timestamp
       id: timestampPublishSucceeded
+      shell: bash
       run: |
         export TZ="Europe/Budapest"
         echo "timestampPublishSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
@@ -110,6 +112,7 @@ runs:
 
     - name: Get Current Timestamp
       id: timestampPublishFailed
+      shell: bash
       if: failure() # Only runs if there is a failure in previous steps
       run: |
         export TZ="Europe/Budapest"
