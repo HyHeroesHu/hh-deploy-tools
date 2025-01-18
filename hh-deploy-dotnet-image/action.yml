@@ -20,7 +20,10 @@ inputs:
   dockerhub-image-name:
     description: "DockerHub image name. At the end a timestamp will be concated."
     required: true
-  docker-container-public-port:
+  docker-container-name:
+    description: "The name of the docker container, which will host the app."
+    required: true
+  docker-container-port:
     description: "The public port, where the docker container's app will be reachable."
     required: true
   version-timestamp:
@@ -72,7 +75,7 @@ runs:
           echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
 
           # Delete all previous images
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ inputs.dockerhub-image-name }}" | while read -r image; do
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ inputs.docker-image-name }}" | while read -r image; do
               echo "Removing image: $image"
               docker rmi -f "$image"
           done
@@ -81,11 +84,11 @@ runs:
           docker pull ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
           # Delete the existing container
-          docker stop ${{ inputs.dockerhub-image-name }}
-          docker rm ${{ inputs.dockerhub-image-name }}
+          docker stop ${{ inputs.docker-container-name }}
+          docker rm ${{ inputs.docker-container-name }}
           
           # Start he new version
-          docker run -d --network=host --name ${{ inputs.dockerhub-image-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-public-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-public-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
     ##
     ## Conditional Discord notifications about finish
     ##
