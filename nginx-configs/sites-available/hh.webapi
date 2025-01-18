@@ -1,0 +1,70 @@
+upstream backend {
+    server localhost:5000;
+}
+
+server {
+
+	server_name www.api.hyheroes.hu api.hyheroes.hu;
+	
+    listen       443 ssl;
+    ssl_certificate      /etc/nginx/ssl/hyheroes.hu.pem;
+    ssl_certificate_key  /etc/nginx/ssl/hyheroes.hu.key.pem;
+    ssl_session_cache    shared:SSL:1m;
+    ssl_session_timeout  5m;
+    ssl_protocols        TLSV1.1 TLSV1.2 TLSV1.3;
+
+    ssl_ciphers  HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers  on;
+
+    location / {		
+		if ($request_method = 'OPTIONS') {
+			add_header 'Access-Control-Allow-Origin' 'https://hyheroes.hu';
+			add_header 'Access-Control-Allow-Credentials' 'true';
+			add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+			add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, Language, X-API-KEY, X-REFRESH, Access-Control-Allow-Origin, Set-Cookie';
+			return 204;
+		}
+		
+		proxy_pass http://localhost:5000;
+        proxy_ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+		
+		proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection keep-alive;
+		
+        proxy_set_header X-Real-IP $remote_addr;		
+        proxy_set_header   Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+
+	server_name www.api.hyheroes.hu api.hyheroes.hu;
+	
+    listen       80;
+
+    location / {		
+		
+		if ($request_method = 'OPTIONS') {
+			add_header 'Access-Control-Allow-Origin' 'https://hyheroes.hu';
+			add_header 'Access-Control-Allow-Credentials' 'true';
+			add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
+			add_header 'Access-Control-Allow-Headers' 'Authorization, Content-Type, Language, X-API-KEY, X-REFRESH, Access-Control-Allow-Origin, Set-Cookie';
+			return 204;
+		}
+	
+		
+        proxy_pass http://localhost:5000;
+		
+		proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection keep-alive;
+        proxy_set_header   Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+}

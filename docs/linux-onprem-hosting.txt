@@ -1,0 +1,85 @@
+----------------------------------------------------------------------
+------------------------ ON PREM HOSTING -----------------------------
+----------------------------------------------------------------------
+
+	1. LÉPÉS MSSQL TELEPÍTÉS LINUX UBUNTU 22.04
+		- KIZÁROLÓAG 22.04 VERZIÓN MŰKÖDIK.
+		- Linuxon futtatni kell a következő parancsokat sorrendben.
+		- Forrás: https://36chambers.wordpress.com/2023/12/26/video-installing-sql-server-on-ubuntu-22-04/
+		
+			#####################################################################################################
+			sudo apt-get install curl
+			curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+			sudo cp /usr/share/keyrings/microsoft-prod.gpg /etc/apt/trusted.gpg.d/
+			 
+			 
+			curl -fsSL https://packages.microsoft.com/config/ubuntu/22.04/mssql-server-2022.list | sudo tee /etc/apt/sources.list.d/mssql-server-2022.list
+			 
+			 
+			sudo apt-get update
+			sudo apt-get install -y mssql-server
+			 
+			 
+			sudo ACCEPT_EULA='Y' MSSQL_PID='Express' MSSQL_SA_PASSWORD='DB-JELSZO' MSSQL_TCP_PORT=1433 /opt/mssql/bin/mssql-conf setup
+			 
+			 
+			systemctl status mssql-server --no-pager
+			 
+			 
+			curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/ms-prod.list
+			 
+			 
+			sudo apt-get update
+			sudo apt-get install -y mssql-tools18 unixodbc-dev
+			 
+			 
+			sudo /opt/mssql/bin/mssql-conf set sqlagent.enabled true
+			sudo systemctl restart mssql-server
+	 
+			sudo apt-get install -y net-tools
+			#####################################################################################################
+		
+		- Az SQL szerver távolról elérhető az alábbi adatokkal:
+			IP=193.201.188.196:1433
+			USER=sa
+			PW=DB-JELSZO
+		
+	2. LÉPÉS: NGINX KONFIGURÁLÁSA
+		- install nginx:
+		
+			#####################################################################################################	
+			sudo apt update
+			sudo apt install nginx
+			#####################################################################################################	
+		
+		- a mellékelt konfig fájlok használata
+		- symbolic link létrehozása linuxon a sites-available fájlokra
+			
+			#####################################################################################################
+			ln -s /etc/nginx/sites-available/hh.webpanel /etc/nginx/sites-enabled/hh.webpanel 
+			ln -s /etc/nginx/sites-available/hh.webapi /etc/nginx/sites-enabled/hh.webapi 
+			#####################################################################################################
+		
+		- a DNS rekordok beállítása a megfelelő átirányításhoz
+		- a letsencrypt default mappájára hivatkozik, ahol az SSL kulcsokat keresi, ezért default certbot mappában kell hagyni a kulcsokat
+	3. LÉPÉS: CERTBOT
+		- certot install wit hnginx extension
+		
+			#####################################################################################################
+			sudo apt update
+			sudo apt install certbot python3-certbot-nginx
+			sudo certbot --nginx -d domain.com www.domain.com	
+			#####################################################################################################
+	
+	4. LÉPÉS: .NET KISZOLGÁLÓ TELEPÍTÉSE
+		- /var/www/hh.webapi helyre másolni a teljes forrásállományát az alkalmazásnak.
+
+	5. LÉPÉS: ANGULAR ALKALMAZÁS TELEPÍTÉSE
+		- /var/www/hh.webpanel helyre másolni a teljes forrásállományát az alkalmazásnak.
+		
+		- Install http-server
+		
+		sudo npm install -g http-server
+			
+		
+		

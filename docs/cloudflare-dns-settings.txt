@@ -1,0 +1,8 @@
+1. domain DNS kontrol importálása cloudflare-re
+2. cloudflare ORIGIN CA létrehozása
+3. certificate feltöltése a linux szerverre
+4. nginx-ben beállítani a cert használatát
+5. cloudflare-en bekapcsolni a proxyzást
+6. cloudflare/SSL/TLS-nél full strict-re kell állítani az SSL-t
+Eredmény:
+A cloudflare automatikusan kezelni fogja a cert megújítást és a https átirányítást

@@ -1,0 +1,56 @@
+server {
+
+	server_name www.hyheroes.hu hyheroes.hu;
+	
+    listen       443 ssl;
+	ssl_certificate      /etc/nginx/ssl/hyheroes.hu.pem;
+    ssl_certificate_key  /etc/nginx/ssl/hyheroes.hu.key.pem;
+    ssl_session_cache    shared:SSL:1m;
+    ssl_session_timeout  5m;
+    ssl_protocols        TLSV1.1 TLSV1.2 TLSV1.3;
+
+    ssl_ciphers  HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers  on;
+	
+	index index.html;
+	root /var/www/hh.webpanel;
+		
+    location / {
+        ###proxy_pass http://localhost:4200;
+        ###proxy_ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+		
+		###proxy_http_version 1.1;
+        ###proxy_set_header   Upgrade $http_upgrade;
+        ###proxy_set_header   Connection keep-alive;
+        ###proxy_set_header   Host $host;
+        ###proxy_cache_bypass $http_upgrade;
+        ###proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        ###proxy_set_header   X-Forwarded-Proto $scheme;
+		
+		try_files $uri $uri/ /index.html;
+    }
+}
+
+
+server {
+
+	server_name www.hyheroes.hu hyheroes.hu;
+	
+    listen       80;
+	index index.html;
+	root /var/www/hh.webpanel;
+	
+    location / {
+        ####proxy_pass http://localhost:4200;		
+		####proxy_http_version 1.1;
+        ####proxy_set_header   Upgrade $http_upgrade;
+        ####proxy_set_header   Connection keep-alive;
+        ####proxy_set_header   Host $host;
+        ####proxy_cache_bypass $http_upgrade;
+        ####proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        ####proxy_set_header   X-Forwarded-Proto $scheme;
+		
+		try_files $uri $uri/ /index.html;
+    }
+	
+}
