@@ -39,9 +39,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Log
-      run: "echo timestamp: ${{ needs.build.outputs.timestamp }}"
-  
     - name: Get Current Timestamp
       id: timestampPublishStarted
       run: |
