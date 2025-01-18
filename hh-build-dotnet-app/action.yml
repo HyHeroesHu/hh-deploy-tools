@@ -30,9 +30,14 @@ inputs:
 outputs:
   version-timestamp:
     description: "The used timestamp for versioning the Docker image."
+     value: ${{ env.TIMESTAMP }}
 
 runs:
   using: "composite"
+  outputs:
+    # Need to set output from the 'runs' too
+    version-timestamp:
+      value: ${{ steps.set_timestamp.outputs.timestamp }}
   steps:
     # Step 1: Get timestamp
     - name: Get Current Timestamp
@@ -88,12 +93,15 @@ runs:
     - name: Set dynamic global environment variable
       id: set_timestamp
       shell: bash
+        #echo "::set-output name=timestamp::$TIMESTAMP"
       run: |
         export TZ="Europe/Budapest"
         TIMESTAMP=$(date +"%Y%m%d%H%M%S")
         echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
-        echo "::set-output name=timestamp::$TIMESTAMP"
-        
+        echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+      env:
+        TIMESTAMP: ${{ env.TIMESTAMP }}
+    
     # Step 8: Build and push Docker image
     - name: Build and Push Docker Image
       shell: bash
@@ -102,11 +110,6 @@ runs:
         docker build -t $IMAGE_NAME:${{ github.ref_name }}-${{ env.TIMESTAMP }} -f ./Dockerfile .
         docker push $IMAGE_NAME:${{ github.ref_name }}-${{ env.TIMESTAMP }}
 
-    # Step 9: Set output value
-    - name: Set output value
-      run: echo "version-timestamp=${{ env.TIMESTAMP }}" >> $GITHUB_OUTPUT
-      shell: bash
-    
     ##
     ## Conditional Discord notifications about finish
     ##
