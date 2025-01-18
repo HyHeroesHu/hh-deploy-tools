@@ -54,7 +54,7 @@ runs:
         # The message to send
         message: |
           -----------------------------
-          🔃 Application: **{{ inputs.application-name }}**
+          🔃 Application: **${{ inputs.application-name }}**
           🟡 State: **PUBLISH STARTED**
           ⏲️ Timestamp: **${{ env.timestampPublishStarted }}**
           🆔 Run ID: **${{ github.run_id }}**
@@ -66,7 +66,7 @@ runs:
       with:
         host: ${{ inputs.ssh-host }}
         username: ${{ inputs.ssh-user }}
-        password: ${{ inputs.password }}
+        password: ${{ inputs.ssh-password }}
         script: |
           # Login to docker
           echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
@@ -104,7 +104,7 @@ runs:
         # The message to send
         message: |
           -----------------------------
-          🔃 Application: **{{ inputs.application-name }}**
+          🔃 Application: **${{ inputs.application-name }}**
           🟢 State: **PUBLISH SUCCEEDED**
           ⏲️ Timestamp: **${{ env.timestampPublishSucceeded }}**
           🆔 Run ID: **${{ github.run_id }}**
@@ -125,7 +125,7 @@ runs:
         webhook-url: ${{ inputs.discord-nofity-webook-url }}
         message: |
           -----------------------------
-          🔃 Application: **{{ inputs.application-name }}**
+          🔃 Application: **${{ inputs.application-name }}**
           🔴 State: **PUBLISH FAILED**
           ⏲️ Timestamp: **${{ env.timestampPublishFailed }}**
           🆔 Run ID: **${{ github.run_id }}**
