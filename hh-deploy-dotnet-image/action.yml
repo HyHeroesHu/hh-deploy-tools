@@ -87,6 +87,9 @@ runs:
           docker stop ${{ inputs.docker-container-name }}
           docker rm ${{ inputs.docker-container-name }}
           
+          # Increase linux kernel's inotify limit
+          sudo sysctl fs.inotify.max_user_instances=1024
+          
           # Start he new version
           docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-public-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
     ##
