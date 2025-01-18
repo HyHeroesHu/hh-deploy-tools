@@ -34,10 +34,6 @@ outputs:
 
 runs:
   using: "composite"
-  outputs:
-    # Need to set output from the 'runs' too
-    version-timestamp:
-      value: ${{ steps.set_timestamp.outputs.timestamp }}
   steps:
     # Step 1: Get timestamp
     - name: Get Current Timestamp
