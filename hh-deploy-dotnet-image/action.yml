@@ -87,7 +87,7 @@ runs:
           docker pull ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
           # Remove the server from the nginx upstream for avoiding traffic on stopped replica
-          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000;|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000 down;|" ${{ inputs.nginx-site-config-path }}
+          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|" ${{ inputs.nginx-site-config-path }}
           nginx -s reload
 
           # Delete the existing container
@@ -98,10 +98,10 @@ runs:
           sudo sysctl fs.inotify.max_user_instances=1024
           
           # Start he new version
-          docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-public-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
           # Remove the server from the nginx upstream for avoiding traffic on stopped replica
-          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000;|" ${{ inputs.nginx-site-config-path }}
+          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|" ${{ inputs.nginx-site-config-path }}
           nginx -s reload
           
     ##
