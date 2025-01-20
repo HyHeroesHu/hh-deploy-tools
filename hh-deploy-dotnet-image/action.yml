@@ -100,10 +100,6 @@ runs:
           # Start he new version
           docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-public-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
-          # Wait before allowing traffix through nginx
-          sleep 10 &
-          wait
-
           # Remove the server from the nginx upstream for avoiding traffic on stopped replica
           sed -i "s|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000;|" ${{ inputs.nginx-site-config-path }}
           nginx -s reload
