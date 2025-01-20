@@ -1,14 +1,14 @@
-name: "Build and Push HH .NET Application Docker image to DockerHub"
+name: "Build HH.WebPanel Docker image and push to DockerHub"
 
-description: "Action for building Docker Image from HyHeroes .NET application and pushing to DockerHub. The action handles the HH.Common repo, as dependency."
+description: "Action for building HH.WebPanel Angular application and pushing to DockerHub."
 
 inputs:
-  application-name: #"HH.Backend.WebAPI"
+  application-name: #"HH.WebPanel"
     description: "The full name of the application"
   discord-nofity-webook-url: #${{ secrets.DISCORD_WEBHOOK_URL }}
     description: "The Discord webhook URL for event notification."
     required: true
-  application-repository: #"HyHeroesHu/HH.Backend.WebAPI"
+  application-repository: #"HyHeroesHu/HH.WebPanel"
     description: "The repository for the application source."
     required: true
   application-repository-token: #${{ secrets.PUBLISH_PAT_TOKEN }}
@@ -23,7 +23,7 @@ inputs:
   dockerhub-namespace: #"martinmarkus"
     description: "DockerHub namespace for pushing images."
     required: true
-  dockerhub-image-name: #"hh.backend.webapi"
+  dockerhub-image-name: #"hh.backend.webpanel"
     description: "DockerHub image name. At the end a timestamp will be concated."
     required: true
 
@@ -65,21 +65,7 @@ runs:
         repository: ${{ inputs.application-repository }}
         token: ${{ inputs.application-repository-token }}
         path: ${{ inputs.application-name }}
-        
-    # Step 4: Checkout the second repository
-    - name: Checkout HH.Backend.Common
-      uses: actions/checkout@v4
-      with:
-        repository: HyHeroesHu/HH.Backend.Common
-        token: ${{ inputs.application-repository-token }}
-        path: HH.Backend.Common
-
-    # Step 5: Move Dockerfile to workspace root
-    - name: Move Dockerfile to workspace root
-      shell: bash
-      run: |
-        sudo cp ${{ inputs.application-name }}/Dockerfile .
-
+    
     # Step 6: Log in to Docker
     - name: Log in to Docker Hub
       shell: bash  
