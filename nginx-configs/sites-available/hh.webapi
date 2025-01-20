@@ -3,8 +3,8 @@ log_format upstreamlog '$server_name to: $upstream_addr [$request] '
     'msec $msec request_time $request_time';
 
 upstream webapi {
-    server 127.0.0.1:5000 max_conns=2000;
-    server 127.0.0.1:5001 max_conns=2000;
+    server 127.0.0.1:5000;
+    server 127.0.0.1:5001;
 }
 
 server {
@@ -23,7 +23,7 @@ server {
 
     access_log /var/log/nginx/access.log upstreamlog;
 
-    location /upstream_conf {		
+    location / {		
 		if ($request_method = 'OPTIONS') {
 			add_header 'Access-Control-Allow-Origin' 'https://hyheroes.hu';
 			add_header 'Access-Control-Allow-Credentials' 'true';
@@ -45,8 +45,6 @@ server {
         proxy_cache_bypass $http_upgrade;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
-
-        upstream_conf;
     }
 }
 
@@ -58,7 +56,7 @@ server {
     
     access_log /var/log/nginx/access.log upstreamlog;
     
-    location /upstream_conf {		
+    location / {		
 		
 		if ($request_method = 'OPTIONS') {
 			add_header 'Access-Control-Allow-Origin' 'https://hyheroes.hu';
@@ -78,7 +76,5 @@ server {
         proxy_cache_bypass $http_upgrade;
         proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto $scheme;
-
-        upstream_conf;
     }
 }
