@@ -26,6 +26,9 @@ inputs:
   docker-container-port:
     description: "The public port, where the docker container's app will be reachable."
     required: true
+  nginx-site-config-path:
+    description: "Absolute path to nginx site config on Linux"
+    required: true
   version-timestamp:
     description: "Version timestamp value for docker image identifying."
     required: true
@@ -83,6 +86,10 @@ runs:
           # Pull new image
           docker pull ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
+          # Remove the server from the nginx upstream for avoiding traffic on stopped replica
+          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000;|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000 down;|" ${{ nginx-site-config-path }}
+          nginx -s reload
+
           # Delete the existing container
           docker stop ${{ inputs.docker-container-name }}
           docker rm ${{ inputs.docker-container-name }}
@@ -92,6 +99,15 @@ runs:
           
           # Start he new version
           docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-public-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+
+          # Wait before allowing traffix through nginx
+          sleep 10 &
+          wait
+
+          # Remove the server from the nginx upstream for avoiding traffic on stopped replica
+          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-public-port }} max_conns=2000;|" ${{ nginx-site-config-path }}
+          nginx -s reload
+          
     ##
     ## Conditional Discord notifications about finish
     ##
