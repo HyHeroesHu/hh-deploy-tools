@@ -65,13 +65,17 @@ runs:
         repository: ${{ inputs.application-repository }}
         token: ${{ inputs.application-repository-token }}
         path: ${{ inputs.application-name }}
-    
-    # Step 6: Log in to Docker
+
+    # Step 4: Checkout code from $BRANCH branch of the repo
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Step 5: Log in to Docker
     - name: Log in to Docker Hub
       shell: bash  
       run: echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
     
-    # Step 7: Set version timestamp globally for later usage from the publish job
+    # Step 6: Set version timestamp globally for later usage from the publish job
     - name: Set dynamic global environment variable
       id: set_timestamp
       shell: bash
@@ -82,7 +86,31 @@ runs:
         echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
         echo "::set-output name=timestamp::$TIMESTAMP"
     
-    # Step 8: Build and push Docker image
+    # Step 7: Build and push Docker image
+    - name: Build and Push Docker Image
+      shell: bash
+      run: |
+        IMAGE_NAME=${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}
+        docker build -t $IMAGE_NAME:${{ github.ref_name }}-${{ env.TIMESTAMP }} -f ./Dockerfile .
+        docker push $IMAGE_NAME:${{ github.ref_name }}-${{ env.TIMESTAMP }}
+    
+    # Step 8: Log in to Docker
+    - name: Log in to Docker Hub
+      shell: bash  
+      run: echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
+    
+    # Step 9: Set version timestamp globally for later usage from the publish job
+    - name: Set dynamic global environment variable
+      id: set_timestamp
+      shell: bash
+      run: |
+        export TZ="Europe/Budapest"
+        TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+        echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+        echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+        echo "::set-output name=timestamp::$TIMESTAMP"
+    
+    # Step 10: Build and push Docker image
     - name: Build and Push Docker Image
       shell: bash
       run: |
