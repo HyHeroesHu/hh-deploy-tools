@@ -98,11 +98,21 @@ runs:
           # Create a container from the image, WITHOUT starting it
           docker create --name temp-${{ inputs.docker-container-name }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
-          # Copy the files from the container to target host folder
-          docker cp temp-${{ inputs.docker-container-name }}:/app /var/www/hh.webpanel
+          # Copy the files from the container to helper target folder near the host
+          docker cp temp-${{ inputs.docker-container-name }}:/app /var/www/hh.webpanel-new
+
+          # Rename the old production folder, with tagging for deletion
+          mv /var/www/hh.webpanel /var/www/hh.webpanel-remove
+
+          # Rename the new folder to production usage
+          mv /var/www/hh.webpanel-new /var/www/hh.webpanel
+
+          # Clear the target folder
+          rm -rf /var/www/hh.webpanel-remove
          
           # Remove temp container
           docker rm temp-${{ inputs.docker-container-name }}
+
 
     ##
     ## Conditional Discord notifications about finish
