@@ -45,28 +45,30 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Step 1: Get timestamp
     - name: Get Current Timestamp
-      id: timestampPublishStarted
+      id: timestampBuildStarted
       shell: bash
       run: |
         export TZ="Europe/Budapest"
-        echo "timestampPublishStarted=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
-  
-    - name: Notify Discord
+        echo "timestampBuildStarted=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+      
+    # Step 2: Discord notification
+    - name: Notify Discord (on Start)
       uses: liondadev/discord-action@v2.1.3
       with:
         # The webhook URL
-        webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        webhook-url: ${{ inputs.discord-nofity-webook-url }}
         # The message to send
         message: |
           -----------------------------
-          🔃 Application: **HH.WebPanel**
+          🔃 Application: **${{ inputs.application-name }}**
           🟡 State: **PUBLISH STARTED**
-          ⏲️ Timestamp: **${{ env.timestampPublishStarted }}**
+          ⏲️ Timestamp: **${{ env.timestampBuildStarted }}**
+          👤 Started By: **${{ github.actor }}**
           🆔 Run ID: **${{ github.run_id }}**
-          👤 Git Actor: **${{ github.actor }}**
   
-    # Deploy to VPS
+    # Step 3: Deploy to VPS
     - name: Deploy Docker image to VPS via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -106,43 +108,43 @@ runs:
     ## Conditional Discord notifications about finish
     ##
     - name: Get Current Timestamp
-      id: timestampPublishSucceeded
+      id: timestampBuildingSucceeded
       shell: bash
       run: |
         export TZ="Europe/Budapest"
-        echo "timestampPublishSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+        echo "timestampBuildingSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
         
     - name: Notify Discord (on Success)
       uses: liondadev/discord-action@v2.1.3
       with:
         # The webhook URL
-        webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        webhook-url: ${{ inputs.discord-nofity-webook-url }}
         # The message to send
         message: |
           -----------------------------
-          🔃 Application: **HH.WebPanel**
+          🔃 Application: **${{ inputs.application-name }}**
           🟢 State: **PUBLISH SUCCEEDED**
-          ⏲️ Timestamp: **${{ env.timestampPublishSucceeded }}**
+          ⏲️ Timestamp: **${{ env.timestampBuildingSucceeded }}**
           🆔 Run ID: **${{ github.run_id }}**
           👤 Git Actor: **${{ github.actor }}**
 
     - name: Get Current Timestamp
-      id: timestampPublishFailed
+      id: timestampBuildingFailed
       shell: bash
-      if: failure()  # Only runs if there is a failure in previous steps
+      if: failure()
       run: |
         export TZ="Europe/Budapest"
-        echo "timestampPublishFailed=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+        echo "timestampBuildingFailed=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
 
     - name: Notify Discord (on Failure)
       uses: liondadev/discord-action@v2.1.3
-      if: failure()  # Only runs if there is a failure in previous steps
+      if: failure()
       with:
-        webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        webhook-url: ${{ inputs.discord-nofity-webook-url }}
         message: |
           -----------------------------
-          🔃 Application: **HH.WebPanel**
+          🔃 Application: **${{ inputs.application-name }}**
           🔴 State: **PUBLISH FAILED**
-          ⏲️ Timestamp: **${{ env.timestampPublishFailed }}**
+          ⏲️ Timestamp: **${{ env.timestampBuildingFailed }}**
           🆔 Run ID: **${{ github.run_id }}**
           👤 Git Actor: **${{ github.actor }}**
