@@ -85,28 +85,21 @@ runs:
           # Pull new image
           docker pull ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
-          # Remove the server from the nginx upstream for avoiding traffic on stopped replica
-          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|" ${{ inputs.nginx-site-config-path }}
-          nginx -s reload
-
           # Delete the existing container
           docker stop ${{ inputs.docker-container-name }}
           docker rm ${{ inputs.docker-container-name }}
           
           # Increase linux kernel's inotify limit
           sudo sysctl fs.inotify.max_user_instances=1024
-          
-          # Start he new version
-          docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
-          # Wait before allowing traffix through nginx
-          sleep 10 &
-          wait
-          
-          # Remove the server from the nginx upstream for avoiding traffic on stopped replica
-          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|" ${{ inputs.nginx-site-config-path }}
-          nginx -s reload
+          # Create a container from the image, WITHOUT starting it
+          docker create --name temp-${{ inputs.docker-container-name }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
+          # Copy the files from the container to target host folder
+          docker cp temp-${{ inputs.docker-container-name }}:/app /var/www/hh.webpanel
+         
+          # Remove temp container
+          docker rm temp-${{ inputs.docker-container-name }}
 
     ##
     ## Conditional Discord notifications about finish
