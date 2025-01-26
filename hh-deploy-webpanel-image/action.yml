@@ -54,7 +54,6 @@ runs:
   
     - name: Notify Discord
       uses: liondadev/discord-action@v2.1.3
-      shell: bash
       with:
         # The webhook URL
         webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
