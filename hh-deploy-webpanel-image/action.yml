@@ -47,12 +47,14 @@ runs:
   steps:
     - name: Get Current Timestamp
       id: timestampPublishStarted
+      shell: bash
       run: |
         export TZ="Europe/Budapest"
         echo "timestampPublishStarted=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
   
     - name: Notify Discord
       uses: liondadev/discord-action@v2.1.3
+      shell: bash
       with:
         # The webhook URL
         webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -106,6 +108,7 @@ runs:
     ##
     - name: Get Current Timestamp
       id: timestampPublishSucceeded
+      shell: bash
       run: |
         export TZ="Europe/Budapest"
         echo "timestampPublishSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
@@ -126,6 +129,7 @@ runs:
 
     - name: Get Current Timestamp
       id: timestampPublishFailed
+      shell: bash
       if: failure()  # Only runs if there is a failure in previous steps
       run: |
         export TZ="Europe/Budapest"
