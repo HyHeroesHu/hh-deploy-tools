@@ -53,7 +53,7 @@ runs:
         message: |
           -----------------------------
           🔃 Application: **${{ inputs.application-name }}**
-          🟡 State: **DOCKER IMAGE BUILD STARTED**
+          🟡 State: **BUILD STARTED**
           ⏲️ Timestamp: **${{ env.timestampBuildStarted }}**
           👤 Started By: **${{ github.actor }}**
           🆔 Run ID: **${{ github.run_id }}**
