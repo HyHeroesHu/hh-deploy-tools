@@ -41,6 +41,9 @@ inputs:
   ssh-password:
     description: "SSH password"
     required: true
+  db-connection-string:
+    description: "Database connection string"
+    required: true
 
 runs:
   using: "composite"
@@ -98,7 +101,7 @@ runs:
           sudo sysctl fs.inotify.max_user_instances=1024
           
           # Start he new version
-          docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          docker run -d --network=host --name ${{ inputs.docker-container-name }} -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e DbOptions__ConnectionString='${{ inputs.db-connection-string }}' ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
           # Wait before allowing traffix through nginx
           sleep 10 &
