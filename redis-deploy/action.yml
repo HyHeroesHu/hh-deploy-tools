@@ -1,0 +1,115 @@
+name: "Deploy Redis"
+
+description: "Deploying Redis via SSH"
+
+inputs:
+  application-name:
+    description: "The full name of the application"
+  discord-nofity-webook-url:
+    description: "The Discord webhook URL for event notification."
+    required: true
+  docker-container-name:
+    description: "The name of the docker container, which will host the app."
+    required: true
+  docker-container-port:
+    description: "The public port, where the docker container's app will be reachable."
+    required: true
+  version-timestamp:
+    description: "Version timestamp value for docker image identifying."
+    required: true
+  ssh-host:
+    description: "SSH host address"
+    required: true
+  ssh-user:
+    description: "SSH user"
+    required: true
+  ssh-password:
+    description: "SSH password"
+    required: true
+  redis-password:
+    description: "Redis server password"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get Current Timestamp
+      shell: bash
+      id: timestampPublishStarted
+      run: |
+        export TZ="Europe/Budapest"
+        echo "timestampPublishStarted=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+  
+    - name: Notify Discord
+      uses: liondadev/discord-action@v2.1.3
+      with:
+        # The webhook URL
+        webhook-url: ${{ inputs.discord-nofity-webook-url }}
+        # The message to send
+        message: |
+          -----------------------------
+          🔃 Application: **${{ inputs.application-name }}**
+          🟡 State: **PUBLISH STARTED**
+          ⏲️ Timestamp: **${{ env.timestampPublishStarted }}**
+          🆔 Run ID: **${{ github.run_id }}**
+          👤 Git Actor: **${{ github.actor }}**
+  
+    # Step 9: Deploy to VPS
+    - name: Deploy Docker image to VPS via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ inputs.ssh-host }}
+        username: ${{ inputs.ssh-user }}
+        password: ${{ inputs.ssh-password }}
+        script: |
+          # Delete all previous images
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ inputs.docker-image-name }}" | while read -r image; do
+              echo "Removing image: $image"
+              docker rmi -f "$image"
+          done
+
+              
+    ##
+    ## Conditional Discord notifications about finish
+    ##
+    - name: Get Current Timestamp
+      id: timestampPublishSucceeded
+      shell: bash
+      run: |
+        export TZ="Europe/Budapest"
+        echo "timestampPublishSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+        
+    - name: Notify Discord (on Success)
+      uses: liondadev/discord-action@v2.1.3
+      with:
+        # The webhook URL
+        webhook-url: ${{ inputs.discord-nofity-webook-url }}
+        # The message to send
+        message: |
+          -----------------------------
+          🔃 Application: **${{ inputs.application-name }}**
+          🟢 State: **PUBLISH SUCCEEDED**
+          ⏲️ Timestamp: **${{ env.timestampPublishSucceeded }}**
+          🆔 Run ID: **${{ github.run_id }}**
+          👤 Git Actor: **${{ github.actor }}**
+
+    - name: Get Current Timestamp
+      id: timestampPublishFailed
+      shell: bash
+      if: failure() # Only runs if there is a failure in previous steps
+      run: |
+        export TZ="Europe/Budapest"
+        echo "timestampPublishFailed=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+
+    - name: Notify Discord (on Failure)
+      uses: liondadev/discord-action@v2.1.3
+      if: failure() # Only runs if there is a failure in previous steps
+      with:
+        webhook-url: ${{ inputs.discord-nofity-webook-url }}
+        message: |
+          -----------------------------
+          🔃 Application: **${{ inputs.application-name }}**
+          🔴 State: **PUBLISH FAILED**
+          ⏲️ Timestamp: **${{ env.timestampPublishFailed }}**
+          🆔 Run ID: **${{ github.run_id }}**
+          👤 Git Actor: **${{ github.actor }}**
