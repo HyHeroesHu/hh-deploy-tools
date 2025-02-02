@@ -17,6 +17,9 @@ inputs:
   version-timestamp:
     description: "Version timestamp value for docker image identifying."
     required: true
+  application-repository-token:
+    description: "GitHub PAT for checkout the repos."
+    required: true
   ssh-host:
     description: "SSH host address"
     required: true
@@ -53,6 +56,16 @@ runs:
           ⏲️ Timestamp: **${{ env.timestampPublishStarted }}**
           🆔 Run ID: **${{ github.run_id }}**
           👤 Git Actor: **${{ github.actor }}**
+
+    # Step 3: Checkout
+    - name: Checkout ${{ inputs.application-name }}
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.application-repository }}
+        token: ${{ inputs.application-repository-token }}
+        path: ${{ inputs.application-name }}
+
+    # upload .dockerfile
   
     # Step 9: Deploy to VPS
     - name: Deploy Docker image to VPS via SSH
