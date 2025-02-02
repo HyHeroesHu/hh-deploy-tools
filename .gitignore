@@ -29,10 +29,6 @@ config/.env
 *.pem
 *.key
 
-# Ignore any files related to Docker if using
-Dockerfile*
-docker-compose.yml
-
 # Ignore generated files (if applicable)
 *.tar
 *.tgz
