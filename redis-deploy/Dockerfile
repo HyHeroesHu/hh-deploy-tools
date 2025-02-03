@@ -9,4 +9,4 @@ EXPOSE 6379
 # Optionally, use a custom configuration file
 # CMD ["redis-server", "/usr/local/etc/redis/redis.conf"]
 
-CMD ["redis-server", "--maxmemory", "4gb", "--maxmemory-policy", "allkeys-lru", "--requirepass", "${REDIS_PASSWORD}"]
+CMD ["redis-server", "--maxmemory", "4gb", "--maxmemory-policy", "allkeys-lru", "--requirepass", "test"]
