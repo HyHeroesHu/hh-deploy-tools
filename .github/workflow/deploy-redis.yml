@@ -1,0 +1,28 @@
+name: Deploy Redis server
+  
+# Run the action on version branch creation
+on:
+  # Allows the manual running from the Action tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy Redis
+    runs-on: ubuntu-latest
+    steps:
+        - name: Deploy Redis
+          id: deploy-step-1
+          uses: HyHeroesHu/hh-deploy-tools/redis-deploy@main
+          with:
+            application-name: "Redis"
+            docker-container-name: "redis" # the container name must be unique for multiple instances
+            docker-container-port: 6379       
+            discord-nofity-webook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+            version-timestamp: $(date +"%Y%m%d%H%M%S")
+            ssh-host: ${{ secrets.VPS_HOST }}
+            ssh-user: ${{ secrets.VPS_USER }}
+            ssh-password: ${{ secrets.VPS_PASSWORD }}
+            secret-env-base64: ${{ secrets.WEBAPI_ENV_BASE64_PROD }}
+            application-repository-token: ${{ secrets.PUBLISH_PAT_TOKEN }}
+            redis-password: ${{ secrets.REDIS_PASSWORD }}
+   
