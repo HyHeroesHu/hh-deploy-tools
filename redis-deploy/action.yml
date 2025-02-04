@@ -69,6 +69,7 @@ runs:
         path: ${{ inputs.application-name }}
 
     - name: List current folder contents
+      shell: bash
       run: ls -la
 
     # upload .dockerfile
