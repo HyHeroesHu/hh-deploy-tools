@@ -23,7 +23,6 @@ jobs:
             ssh-user: ${{ secrets.VPS_USER }}
             ssh-password: ${{ secrets.VPS_PASSWORD }}
             ftp-protocol: ${{ secrets.FTP_PROTOCOL }}
-            secret-env-base64: ${{ secrets.WEBAPI_ENV_BASE64_PROD }}
             application-repository-token: ${{ secrets.PUBLISH_PAT_TOKEN }}
             redis-password: ${{ secrets.REDIS_PASSWORD }}
    
