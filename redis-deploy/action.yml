@@ -85,7 +85,7 @@ runs:
         port: ${{ inputs.ftp-port }}
         username: ${{ inputs.ssh-user }}
         password: ${{ inputs.ssh-password }}
-        localDir: /home/runner/work/_actions/HyHeroesHu/hh-deploy-tools/main/redis-deploy/Dockerfile
+        localDir: /home/runner/work/_actions/HyHeroesHu/hh-deploy-tools/main/redis-deploy/
         remoteDir: /etc/redis/
         compress: true
         removeExtraFilesOnServer: true
