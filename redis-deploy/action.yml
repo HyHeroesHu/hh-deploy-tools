@@ -85,7 +85,7 @@ runs:
         password: ${{ inputs.ssh-password }}
         protocol: ${{ inputs.ftp-protocol }}
         # Folder to upload from, must end with trailing slash /
-        local-dir: /home/runner/work/redis-deploy/
+        local-dir: /home/runner/work/
         # Path to upload to on the server. Must end with trailing slash /
         server-dir: /etc/redis/
         # Deletes ALL contents of server-dir, even items in excluded with exclude argument
