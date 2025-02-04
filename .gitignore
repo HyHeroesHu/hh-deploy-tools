@@ -18,9 +18,6 @@ Thumbs.db
 # Ignore action test logs
 *.log
 
-# Ignore GitHub Action run metadata
-.github/workflows/*.yml
-
 # Ignore .env or config files that contain secrets
 .env
 config/.env
