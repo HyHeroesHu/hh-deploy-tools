@@ -26,6 +26,9 @@ inputs:
   ssh-user:
     description: "SSH user"
     required: true
+  ftp-port:
+    description: "FTP port"
+    required: true
   ftp-protocol:
     description: "FTP protocol"
     required: true
@@ -79,7 +82,7 @@ runs:
       uses: wangyucode/sftp-upload-action@v2.0.4
       with:
         host: ${{ inputs.ssh-host }}
-        port: 21
+        port: ${{ inputs.ftp-port }}
         username: ${{ inputs.ssh-user }}
         password: ${{ inputs.ssh-password }}
         localDir: /home/runner/work/
