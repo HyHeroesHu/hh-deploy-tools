@@ -76,7 +76,7 @@ runs:
         # ftp server
         server: ${{ inputs.ssh-host }}
         # ftp username
-        username: ${{ inputs.ss-user }}
+        username: ${{ inputs.ssh-user }}
         # ftp password
         password: ${{ inputs.ssh-password }}
         protocol: ${{ inputs.ftp-protocol }}
