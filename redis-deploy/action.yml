@@ -26,6 +26,9 @@ inputs:
   ssh-user:
     description: "SSH user"
     required: true
+  ftp-protocol:
+    description: "FTP protocol"
+    required: true
   ssh-password:
     description: "SSH password"
     required: true
@@ -76,7 +79,7 @@ runs:
         username: ${{ inputs.ss-user }}
         # ftp password
         password: ${{ inputs.ssh-password }}
-        protocol: ${{ secrets.FTP_PROTOCOL }}
+        protocol: ${{ inputs.ftp-protocol }}
         # Folder to upload from, must end with trailing slash /
         local-dir: .
         # Path to upload to on the server. Must end with trailing slash /
