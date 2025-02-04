@@ -68,6 +68,9 @@ runs:
         token: ${{ inputs.application-repository-token }}
         path: ${{ inputs.application-name }}
 
+    - name: List current folder contents
+      run: ls -la
+
     # upload .dockerfile
     - name: FTP Deploy
       # You may pin to the exact commit or the version.
