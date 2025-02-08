@@ -16,6 +16,7 @@ jobs:
           with:
             application-name: "Redis"
             docker-container-name: "redis" # the container name must be unique for multiple instances
+            docker-image-name: "redis" # the container name must be unique for multiple instances
             docker-container-port: 6379       
             discord-nofity-webook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
             version-timestamp: $(date +"%Y%m%d%H%M%S")
