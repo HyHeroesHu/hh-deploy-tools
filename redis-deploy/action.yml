@@ -11,6 +11,9 @@ inputs:
   docker-container-name:
     description: "The name of the docker container, which will host the app."
     required: true
+  docker-image-name:
+    description: "The name of the docker image."
+    required: true
   docker-container-port:
     description: "The public port, where the docker container's app will be reachable."
     required: true
@@ -112,10 +115,10 @@ runs:
           sudo sysctl fs.inotify.max_user_instances=1024
 
           # Create new image
-          docker build -t ${{ inputs.docker-container-name }} /etc/redis/
+          docker build -t ${{ inputs.docker-image-name }} /etc/redis/
 
           # Start the new image version
-          docker run -d --network=host --name ${{ inputs.docker-container-name }} -p 6379:6379 ${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          docker run -d --network=host --name ${{ inputs.docker-container-name }} -p 6379:6379 ${{ inputs.docker-image-name }}
 
              
     ##
