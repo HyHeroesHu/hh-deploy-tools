@@ -118,7 +118,7 @@ runs:
           docker build -t ${{ inputs.docker-image-name }} /etc/redis/
 
           # Start the new image version
-          docker run -d --network=host --name ${{ inputs.docker-container-name }} -p ${{ docker-container-port }}:${{ docker-container-port }} ${{ inputs.docker-image-name }}
+          docker run -d --network=host --name ${{ inputs.docker-container-name }} -p ${{ inputs.docker-container-port }}:${{ inputs.docker-container-port }} ${{ inputs.docker-image-name }}
 
              
     ##
