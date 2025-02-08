@@ -104,7 +104,20 @@ runs:
               docker rmi -f "$image"
           done
 
-              
+          # Delete the existing container
+          docker stop ${{ inputs.docker-container-name }}
+          docker rm ${{ inputs.docker-container-name }}
+          
+          # Increase linux kernel's inotify limit
+          sudo sysctl fs.inotify.max_user_instances=1024
+
+          # Create new image
+          docker build -t ${{ inputs.docker-container-name }} /etc/redis/
+
+          # Start the new image version
+          docker run -d --network=host --name ${{ inputs.docker-container-name }} -p 6379:6379 ${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+
+             
     ##
     ## Conditional Discord notifications about finish
     ##
