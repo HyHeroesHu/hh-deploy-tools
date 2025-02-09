@@ -26,9 +26,6 @@ inputs:
   docker-container-port:
     description: "The public port, where the docker container's app will be reachable."
     required: true
-  nginx-site-config-path:
-    description: "Absolute path to nginx site config on Linux"
-    required: true
   version-timestamp:
     description: "Version timestamp value for docker image identifying."
     required: true
@@ -44,6 +41,9 @@ inputs:
   secret-env-base64:
     description: ".env file content in Base64"
     required: true
+  nginx-site-config-path:
+    description: "Absolute path to nginx site config on Linux. If false, the app won't be remove from the nginx upstream during the deployment."
+    required: false
 
 runs:
   using: "composite"
@@ -90,9 +90,11 @@ runs:
           docker pull ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
           # Remove the server from the nginx upstream for avoiding traffic on stopped replica
-          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|" ${{ inputs.nginx-site-config-path }}
-          nginx -s reload
-
+          if [[ -n "${{ inputs.nginx-site-config-path }}" ]]; then
+            sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|" ${{ inputs.nginx-site-config-path }}
+            nginx -s reload
+          fi
+          
           # Delete the existing container
           docker stop ${{ inputs.docker-container-name }}
           docker rm ${{ inputs.docker-container-name }}
@@ -110,9 +112,11 @@ runs:
           sleep 10 &
           wait
           
-          # Remove the server from the nginx upstream for avoiding traffic on stopped replica
-          sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|" ${{ inputs.nginx-site-config-path }}
-          nginx -s reload
+          # Add the server to the nginx upstream for enabling traffic on deployed replica
+          if [[ -n "${{ inputs.nginx-site-config-path }}" ]]; then
+            sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|" ${{ inputs.nginx-site-config-path }}
+            nginx -s reload
+          fi
           
     ##
     ## Conditional Discord notifications about finish
