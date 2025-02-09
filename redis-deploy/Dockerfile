@@ -1,8 +1,5 @@
 FROM redis:latest
 
-# Defining input parameters for build command 
-ARG REDIS_PASSWORD
-
 # Expose the default Redis port
 EXPOSE 6379
 

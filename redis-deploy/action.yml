@@ -115,7 +115,7 @@ runs:
           sudo sysctl fs.inotify.max_user_instances=1024
 
           # Create new image with passing redis pw from input
-          docker build --build-arg REDIS_PASSWORD=${{ inputs.redis-password }} -t ${{ inputs.docker-image-name }} /etc/redis/
+          docker build -e REDIS_PASSWORD=${{ inputs.redis-password }} -t ${{ inputs.docker-image-name }} /etc/redis/
 
           # Start the new image version
           docker run -d --network=host --name ${{ inputs.docker-container-name }} -p ${{ inputs.docker-container-port }}:${{ inputs.docker-container-port }} ${{ inputs.docker-image-name }}
