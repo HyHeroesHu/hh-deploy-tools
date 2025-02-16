@@ -20,6 +20,7 @@ Thumbs.db
 
 # Ignore .env or config files that contain secrets
 .env
+.env.base64
 config/.env
 
 # Ignore any other configuration or credentials

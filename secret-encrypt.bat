@@ -1,0 +1,1 @@
+powershell -Command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('.env')) > .env.base64"
