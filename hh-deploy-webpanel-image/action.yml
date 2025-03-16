@@ -67,7 +67,8 @@ runs:
           ⏲️ Timestamp: **${{ env.timestampBuildStarted }}**
           👤 Started By: **${{ github.actor }}**
           🆔 Run ID: **${{ github.run_id }}**
-  
+          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
     # Step 3: Deploy to VPS
     - name: Deploy Docker image to VPS via SSH
       uses: appleboy/ssh-action@v1.0.3
@@ -137,7 +138,8 @@ runs:
           ⏲️ Timestamp: **${{ env.timestampBuildingSucceeded }}**
           🆔 Run ID: **${{ github.run_id }}**
           👤 Git Actor: **${{ github.actor }}**
-
+          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
     - name: Get Current Timestamp
       id: timestampBuildingFailed
       shell: bash
@@ -158,3 +160,5 @@ runs:
           ⏲️ Timestamp: **${{ env.timestampBuildingFailed }}**
           🆔 Run ID: **${{ github.run_id }}**
           👤 Git Actor: **${{ github.actor }}**
+          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
