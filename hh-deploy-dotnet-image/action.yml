@@ -68,7 +68,7 @@ runs:
           ⏲️ Timestamp: **${{ env.timestampPublishStarted }}**
           🆔 Run ID: **${{ github.run_id }}**
           👤 Git Actor: **${{ github.actor }}**
-          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     
     # Step 9: Deploy to VPS
     - name: Deploy Docker image to VPS via SSH
@@ -142,7 +142,7 @@ runs:
           ⏲️ Timestamp: **${{ env.timestampPublishSucceeded }}**
           🆔 Run ID: **${{ github.run_id }}**
           👤 Git Actor: **${{ github.actor }}**
-          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     
     - name: Get Current Timestamp
       id: timestampPublishFailed
@@ -164,5 +164,5 @@ runs:
           ⏲️ Timestamp: **${{ env.timestampPublishFailed }}**
           🆔 Run ID: **${{ github.run_id }}**
           👤 Git Actor: **${{ github.actor }}**
-          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     
