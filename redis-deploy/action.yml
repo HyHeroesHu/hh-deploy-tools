@@ -49,8 +49,8 @@ runs:
       shell: bash
       id: timestampPublishStarted
       run: |
-        export TZ="Europe/Budapest"
-        echo "timestampPublishStarted=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+        sudo export TZ="Europe/Budapest"
+        sudo echo "timestampPublishStarted=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
   
     - name: Notify Discord
       uses: liondadev/discord-action@v2.1.3
@@ -102,23 +102,23 @@ runs:
         password: ${{ inputs.ssh-password }}
         script: |
           # Delete all previous images
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ inputs.docker-image-name }}" | while read -r image; do
-              echo "Removing image: $image"
-              docker rmi -f "$image"
+          sudo docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ inputs.docker-image-name }}" | while read -r image; do
+              sudo echo "Removing image: $image"
+              sudo docker rmi -f "$image"
           done
 
           # Delete the existing container
-          docker stop ${{ inputs.docker-container-name }}
-          docker rm ${{ inputs.docker-container-name }}
+          sudo docker stop ${{ inputs.docker-container-name }}
+          sudo docker rm ${{ inputs.docker-container-name }}
           
           # Increase linux kernel's inotify limit
           sudo sysctl fs.inotify.max_user_instances=1024
 
           # Create new image with passing redis pw from input
-          docker build -e REDIS_PASSWORD=${{ inputs.redis-password }} -t ${{ inputs.docker-image-name }} /etc/redis/
+          sudo docker build -e REDIS_PASSWORD=${{ inputs.redis-password }} -t ${{ inputs.docker-image-name }} /etc/redis/
 
           # Start the new image version
-          docker run -d --network=host --name ${{ inputs.docker-container-name }} -p ${{ inputs.docker-container-port }}:${{ inputs.docker-container-port }} ${{ inputs.docker-image-name }}
+          sudo docker run -d --network=host --name ${{ inputs.docker-container-name }} -p ${{ inputs.docker-container-port }}:${{ inputs.docker-container-port }} ${{ inputs.docker-image-name }}
 
              
     ##
@@ -128,8 +128,8 @@ runs:
       id: timestampPublishSucceeded
       shell: bash
       run: |
-        export TZ="Europe/Budapest"
-        echo "timestampPublishSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+        sudo export TZ="Europe/Budapest"
+        sudo echo "timestampPublishSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
         
     - name: Notify Discord (on Success)
       uses: liondadev/discord-action@v2.1.3
@@ -150,8 +150,8 @@ runs:
       shell: bash
       if: failure() # Only runs if there is a failure in previous steps
       run: |
-        export TZ="Europe/Budapest"
-        echo "timestampPublishFailed=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
+        sudo export TZ="Europe/Budapest"
+        sudo echo "timestampPublishFailed=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
 
     - name: Notify Discord (on Failure)
       uses: liondadev/discord-action@v2.1.3
