@@ -49,7 +49,7 @@ runs:
       shell: bash
       id: timestampPublishStarted
       run: |
-        sudo export TZ="Europe/Budapest"
+        export TZ="Europe/Budapest"
         sudo echo "timestampPublishStarted=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
   
     - name: Notify Discord
@@ -128,7 +128,7 @@ runs:
       id: timestampPublishSucceeded
       shell: bash
       run: |
-        sudo export TZ="Europe/Budapest"
+        export TZ="Europe/Budapest"
         sudo echo "timestampPublishSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
         
     - name: Notify Discord (on Success)
@@ -150,7 +150,7 @@ runs:
       shell: bash
       if: failure() # Only runs if there is a failure in previous steps
       run: |
-        sudo export TZ="Europe/Budapest"
+        export TZ="Europe/Budapest"
         sudo echo "timestampPublishFailed=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
 
     - name: Notify Discord (on Failure)

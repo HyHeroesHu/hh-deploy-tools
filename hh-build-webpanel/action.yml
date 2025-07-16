@@ -40,7 +40,7 @@ runs:
       id: timestampBuildStarted
       shell: bash
       run: |
-        sudo export TZ="Europe/Budapest"
+        export TZ="Europe/Budapest"
         sudo echo "timestampBuildStarted=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
       
     # Step 2: Discord notification
@@ -81,7 +81,7 @@ runs:
       id: set_timestamp
       shell: bash
       run: |
-        sudo export TZ="Europe/Budapest"
+        export TZ="Europe/Budapest"
         sudo TIMESTAMP=$(date +"%Y%m%d%H%M%S")
         sudo echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
         sudo echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
@@ -102,7 +102,7 @@ runs:
       id: timestampBuildingSucceeded
       shell: bash
       run: |
-        sudo export TZ="Europe/Budapest"
+        export TZ="Europe/Budapest"
         sudo echo "timestampBuildingSucceeded=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
         
     - name: Notify Discord (on Success)
@@ -125,7 +125,7 @@ runs:
       shell: bash
       if: failure()
       run: |
-        sudo export TZ="Europe/Budapest"
+        export TZ="Europe/Budapest"
         sudo echo "timestampBuildingFailed=$(date +"%Y. %m. %d. %H:%M:%S")" >> $GITHUB_ENV
 
     - name: Notify Discord (on Failure)
