@@ -79,12 +79,12 @@ runs:
     - name: Move Dockerfile to workspace root
       shell: bash
       run: |
-        sudo cp ${{ inputs.application-name }}/Dockerfile .
+        cp ${{ inputs.application-name }}/Dockerfile .
 
     # Step 6: Log in to Docker
     - name: Log in to Docker Hub
       shell: bash  
-      run: echo "${{ inputs.dockerhub-pat }}" | sudo docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
+      run: echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
     
     # Step 7: Set version timestamp globally for later usage from the publish job
     - name: Set dynamic global environment variable
