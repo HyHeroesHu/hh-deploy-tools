@@ -107,7 +107,7 @@ runs:
           sudo cat .env  # Optional: print the file content for debugging (remove in production)
 
           # Start he new version
-          sudo docker run -d --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          sudo docker run -d --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
           # Wait before allowing traffix through nginx
           sleep 10 &
