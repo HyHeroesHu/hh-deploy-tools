@@ -44,6 +44,9 @@ inputs:
   nginx-site-config-path:
     description: "Absolute path to nginx site config on Linux. If false, the app won't be remove from the nginx upstream during the deployment."
     required: false
+  volume-mount-for-static-files:
+    description: "Mounts a volume with linux file system binding"
+    required: false
 
 runs:
   using: "composite"
@@ -107,7 +110,13 @@ runs:
           sudo cat .env  # Optional: print the file content for debugging (remove in production)
 
           # Start he new version
-          sudo docker run -d --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          if [ ${{ inputs.volume-mount-for-static-files }} = true ]; then
+            # Use volume too
+            sudo docker run -d -v /var/www:/app/www --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          else
+            # Do not sse volume
+            sudo docker run -d --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          fi
 
           # Wait before allowing traffix through nginx
           sleep 10 &
