@@ -112,7 +112,7 @@ runs:
           # Start he new version
           if [ ${{ inputs.volume-mount-for-static-files }} = true ]; then
             # Use volume too
-            sudo docker run -d -v /var/www:/app/www --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+            sudo docker run -d -v /var/www:/var/www --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
           else
             # Do not sse volume
             sudo docker run -d --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
