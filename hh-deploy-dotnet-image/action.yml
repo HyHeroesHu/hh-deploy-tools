@@ -73,7 +73,6 @@ runs:
           👤 Git Actor: **${{ github.actor }}**
           🔗 Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
     
-    # Step 9: Deploy to VPS
     - name: Deploy Docker image to VPS via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -81,52 +80,29 @@ runs:
         username: ${{ inputs.ssh-user }}
         password: ${{ inputs.ssh-password }}
         script: |
-          # Login to docker
-          sudo echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
+          cd /srv
 
-          # Delete all previous images
-          sudo docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ inputs.docker-image-name }}" | while read -r image; do
-              sudo echo "Removing image: $image"
-              sudo docker rmi -f "$image"
-          done
+          echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
 
-          # Pull new image
-          sudo docker pull ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          echo "${{ inputs.secret-env-base64 }}" | base64 --decode > .env
 
-          # Remove the server from the nginx upstream for avoiding traffic on stopped replica
           if [[ -n "${{ inputs.nginx-site-config-path }}" ]]; then
             sudo sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|" ${{ inputs.nginx-site-config-path }}
             sudo nginx -s reload
           fi
-          
-          # Delete the existing container
-          sudo docker stop ${{ inputs.docker-container-name }}
-          sudo docker rm ${{ inputs.docker-container-name }}
-          
-          # Increase linux kernel's inotify limit
-          sudo sysctl fs.inotify.max_user_instances=1024
 
-          sudo echo "${{ inputs.secret-env-base64 }}" | base64 --decode > .env
-          sudo cat .env  # Optional: print the file content for debugging (remove in production)
+          docker compose pull hytale-webapi
+          docker compose up -d --force-recreate hytale-webapi
 
-          # Start he new version
-          if [ ${{ inputs.volume-mount-for-static-files }} = true ]; then
-            # Use volume too
-            sudo docker run -d -v /var/www:/var/www --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
-          else
-            # Do not sse volume
-            sudo docker run -d --network=host --name ${{ inputs.docker-container-name }} --env-file .env -e ASPNETCORE_HTTP_PORTS=${{ inputs.docker-container-port }} -e ASPNETCORE_URLS="http://+:${{ inputs.docker-container-port }}" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
-          fi
+          sleep 10
 
-          # Wait before allowing traffix through nginx
-          sleep 10 &
-          wait
-          
-          # Add the server to the nginx upstream for enabling traffic on deployed replica
           if [[ -n "${{ inputs.nginx-site-config-path }}" ]]; then
             sudo sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|" ${{ inputs.nginx-site-config-path }}
             sudo nginx -s reload
           fi
+
+          docker image prune -f
+
           
     ##
     ## Conditional Discord notifications about finish
