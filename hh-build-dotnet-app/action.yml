@@ -108,7 +108,7 @@ runs:
       shell: bash
       run: |
         IMAGE_NAME=${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}
-        docker build -t $IMAGE_NAME:latest -f ./Dockerfile .
+        docker build --no-cache -t $IMAGE_NAME:latest -f ./Dockerfile .
         docker push $IMAGE_NAME:latest
 
     ##
