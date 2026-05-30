@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+  hytale-lobby:
+    image: eclipse-temurin:25-jre
+    stdin_open: true # Keeps the input stream open
+    tty: true        # Allocates a virtual terminal
+    container_name: hytale-lobby
+    working_dir: /server
+    volumes:
+    - /srv/hytale-lobby:/server
+    command: ["bash", "-c", "chmod +x ./start.sh && ./start.sh"]
+    restart: unless-stopped
+    network_mode: host
+  
+  hytale-pvp:
+    image: eclipse-temurin:25-jre
+    container_name: hytale-pvp
+    stdin_open: true # Keeps the input stream open
+    tty: true        # Allocates a virtual terminal
+    working_dir: /server
+    volumes:
+    - /srv/hytale-pvp:/server
+    command: ["bash", "-c", "chmod +x ./start.sh && ./start.sh"]
+    restart: unless-stopped
+    network_mode: host
+  
+  hytale-survival:
+    image: eclipse-temurin:25-jre
+    container_name: hytale-survival
+    stdin_open: true # Keeps the input stream open
+    tty: true        # Allocates a virtual terminal
+    working_dir: /server
+    volumes:
+    - /srv/hytale-survival:/server
+    command: ["bash", "-c", "chmod +x ./start.sh && ./start.sh"]
+    restart: unless-stopped
+    network_mode: host
+
+  hh.webapi:
+    image: martinmarkus/hh.webapi:latest
+    container_name: hh.webapi
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_URLS: http://+:5000
+      
+  hh.integrationapi:
+    image: martinmarkus/hh.integrationapi:latest
+    container_name: hh.integrationapi
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_URLS: http://+:5010
+      
+  hh.discordbot:
+    image: martinmarkus/hh.discordbot:latest
+    container_name: hh.discordbot
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_URLS: http://+:5100
+    
+  hh.backgroundoperator:
+    image: martinmarkus/hh.backgroundoperator:latest
+    container_name: hh.backgroundoperator
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_URLS: http://+:6000
