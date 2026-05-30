@@ -91,8 +91,8 @@ runs:
             sudo nginx -s reload
           fi
 
-          docker compose pull "${{ docker-container-name }}"
-          docker compose up -d --force-recreate "${{ docker-container-name }}"
+          docker compose pull "${{ inputs.docker-container-name }}"
+          docker compose up -d --force-recreate "${{ inputs.docker-container-name }}"
 
           sleep 10
 
