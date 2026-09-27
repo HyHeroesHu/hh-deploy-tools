@@ -28,12 +28,6 @@ inputs:
     required: true
 
 outputs:
-  image-digest:
-    description: "The pushed image's sha256 digest without its repository; safe to pass between jobs when the Docker Hub username is masked."
-    value: ${{ steps.build_image.outputs.image-digest }}
-  image-reference:
-    description: "The immutable repository@sha256 digest of the pushed image."
-    value: ${{ steps.build_image.outputs.image-reference }}
   version-timestamp:
     description: "The used timestamp for versioning the Docker image."
     value: ${{ steps.set_timestamp.outputs.timestamp }}
@@ -107,30 +101,15 @@ runs:
         TIMESTAMP=$(date +"%Y%m%d%H%M%S")
         echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
         echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+        echo "::set-output name=timestamp::$TIMESTAMP"
     
     # Step 9: Build and push Docker image
     - name: Build and Push Docker Image
-      id: build_image
       shell: bash
-      env:
-        HH_IMAGE_REPOSITORY: ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}
-        HH_APP_DIRECTORY: ${{ inputs.application-name }}
       run: |
-        set -Eeuo pipefail
-        application_revision=$(git -C "$HH_APP_DIRECTORY" rev-parse HEAD)
-        common_revision=$(git -C HH.Backend.Common rev-parse HEAD)
-        docker build --no-cache \
-          --label "org.opencontainers.image.revision=$application_revision" \
-          --label "hu.hyheroes.common.revision=$common_revision" \
-          -t "$HH_IMAGE_REPOSITORY:$TIMESTAMP" -t "$HH_IMAGE_REPOSITORY:latest" -f ./Dockerfile .
-        docker push "$HH_IMAGE_REPOSITORY:$TIMESTAMP"
-        docker push "$HH_IMAGE_REPOSITORY:latest"
-        image_reference=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$HH_IMAGE_REPOSITORY:$TIMESTAMP" |
-          awk -v repository="$HH_IMAGE_REPOSITORY" 'index($0, repository "@sha256:") == 1 { print; exit }')
-        [[ "$image_reference" =~ @sha256:[0-9a-f]{64}$ ]]
-        echo "image-digest=${image_reference##*@}" >> "$GITHUB_OUTPUT"
-        echo "image-reference=$image_reference" >> "$GITHUB_OUTPUT"
-        echo "Built image: $image_reference; application revision: $application_revision; Common revision: $common_revision"
+        IMAGE_NAME=${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}
+        docker build --no-cache -t $IMAGE_NAME:latest -f ./Dockerfile .
+        docker push $IMAGE_NAME:latest
 
     ##
     ## Conditional Discord notifications about finish
