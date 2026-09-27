@@ -77,11 +77,47 @@ runs:
         username: ${{ inputs.ssh-user }}
         password: ${{ inputs.ssh-password }}
         script: |
+          bash -se <<'HH_DEPLOY_SCRIPT'
+          set -Eeuo pipefail
+          exec 9>/var/www/.hh-webpanel-deploy.lock
+          flock -x 9
+          production=/var/www/hh.webpanel
+          staging=$(mktemp -d /var/www/.hh.webpanel-stage.XXXXXXXX)
+          run_suffix=${staging##*.}
+          backup_timestamp=$(TZ=Europe/Budapest date +'%Y-%m-%d_%H-%M-%S')
+          backup="/var/www/hh.webpanel-backup-$backup_timestamp-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}-$run_suffix"
+          temp_container="temp-${{ inputs.docker-container-name }}-$run_suffix"
+          container_created=false
+          backup_moved=false
+          promoted=false
+
+          cleanup() {
+            local status=$?
+            trap - EXIT
+            set +e
+            if [[ "$backup_moved" == true && "$promoted" != true ]]; then
+              if ! mv -T -- "$backup" "$production"; then
+                echo "Rollback failed; restore $backup to $production manually." >&2
+                status=1
+              fi
+            fi
+            if [[ "$container_created" == true ]]; then
+              docker rm "$temp_container" || echo "Warning: temporary container cleanup failed: $temp_container" >&2
+            fi
+            if [[ -d "$staging" ]]; then
+              rm -rf -- "$staging" || echo "Warning: staging cleanup failed: $staging" >&2
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+
           # Login to docker
           echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
 
           # Delete all previous images
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ inputs.docker-image-name }}" | while read -r image; do
+          docker images --format "{{.Repository}}:{{.Tag}}" | { grep "${{ inputs.docker-image-name }}" || [[ $? -eq 1 ]]; } | while read -r image; do
               echo "Removing image: $image"
               docker rmi -f "$image"
           done
@@ -90,29 +126,40 @@ runs:
           docker pull ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
 
           # Delete the existing container
-          docker stop ${{ inputs.docker-container-name }}
-          docker rm ${{ inputs.docker-container-name }}
+          if docker container inspect '${{ inputs.docker-container-name }}' > /dev/null 2>&1; then
+            docker stop '${{ inputs.docker-container-name }}'
+            docker rm '${{ inputs.docker-container-name }}'
+          fi
           
           # Increase linux kernel's inotify limit
           sysctl fs.inotify.max_user_instances=1024
 
           # Create a container from the image, WITHOUT starting it
-          docker create --name temp-${{ inputs.docker-container-name }} ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          docker create --name "$temp_container" ${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}:${{ github.ref_name }}-${{ inputs.version-timestamp }}
+          container_created=true
 
-          # Copy the files from the container to helper target folder near the host
-          docker cp temp-${{ inputs.docker-container-name }}:/app /var/www/hh.webpanel-new
+          # Validate the replacement before changing the live directory.
+          docker cp "$temp_container:/app/." "$staging"
+          if [[ ! -s "$staging/index.html" ]]; then
+            echo "Staged WebPanel is missing a nonempty index.html." >&2
+            exit 1
+          fi
+          # mktemp creates mode 0700; nginx must be able to traverse the promoted root.
+          chmod 755 "$staging"
 
-          # Rename the old production folder, with tagging for deletion
-          mv /var/www/hh.webpanel /var/www/hh.webpanel-remove
+          # Retain the previous site for rollback.
+          if [[ -e "$production" || -L "$production" ]]; then
+            mv -T -- "$production" "$backup"
+            backup_moved=true
+          fi
 
           # Rename the new folder to production usage
-          mv /var/www/hh.webpanel-new /var/www/hh.webpanel
-
-          # Clear the target folder
-          rm -rf /var/www/hh.webpanel-remove
-         
-          # Remove temp container
-          docker rm temp-${{ inputs.docker-container-name }}
+          mv -T -- "$staging" "$production"
+          promoted=true
+          if [[ "$backup_moved" == true ]]; then
+            echo "Previous WebPanel retained at $backup"
+          fi
+          HH_DEPLOY_SCRIPT
 
 
     ##

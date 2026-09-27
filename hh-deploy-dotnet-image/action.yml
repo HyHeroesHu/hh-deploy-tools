@@ -80,29 +80,120 @@ runs:
         username: ${{ inputs.ssh-user }}
         password: ${{ inputs.ssh-password }}
         script: |
+          bash -se <<'HH_DEPLOY_SCRIPT'
+          set -Eeuo pipefail
           cd /srv
+          exec 9>.hh-deploy.lock
+          flock -x 9
+
+          service='${{ inputs.docker-container-name }}'
+          nginx_config='${{ inputs.nginx-site-config-path }}'
+          port='${{ inputs.docker-container-port }}'
+          nginx_work=''
+          nginx_drained=false
+          backend_touched=false
+
+          cleanup() {
+            local status=$?
+            trap - EXIT
+            set +e
+            if (( status != 0 )); then
+              echo "Deployment failed for $service." >&2
+              if [[ "$nginx_drained" == true ]]; then
+                if [[ "$backend_touched" == true ]]; then
+                  sudo cp -p "$nginx_work/drained" "$nginx_config" && sudo nginx -t && sudo nginx -s reload
+                  echo "Upstream remains drained. Recover $service manually before restoring nginx traffic. Original config: $nginx_work/original" >&2
+                else
+                  sudo cp -p "$nginx_work/original" "$nginx_config" && sudo nginx -t && sudo nginx -s reload
+                  if (( $? != 0 )); then
+                    echo "Could not restore nginx; manual recovery required. Original config: $nginx_work/original" >&2
+                  fi
+                fi
+              fi
+            fi
+            if [[ -n "$nginx_work" && $status -eq 0 ]]; then
+              rm -rf -- "$nginx_work" || echo "Warning: nginx staging cleanup failed." >&2
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
 
           echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
 
+          docker compose pull "$service"
           echo "${{ inputs.secret-env-base64 }}" | base64 --decode > .env
 
-          if [[ -n "${{ inputs.nginx-site-config-path }}" ]]; then
-            sudo sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|" ${{ inputs.nginx-site-config-path }}
+          if [[ -n "$nginx_config" ]]; then
+            [[ "$port" =~ ^[0-9]+$ ]]
+            nginx_config=$(readlink -f -- "$nginx_config")
+            nginx_work=$(mktemp -d)
+            sudo cp -p "$nginx_config" "$nginx_work/original"
+            sudo cat "$nginx_work/original" | awk -v port="$port" '
+              BEGIN { pattern = "^[[:space:]]*server[[:space:]]+127\\.0\\.0\\.1:" port "([[:space:]]+[^;#]+)?[[:space:]]*;[[:space:]]*(#.*)?$" }
+              $0 ~ pattern {
+                matches++
+                directive = $0
+                sub(/;.*/, "", directive)
+                if (directive ~ /[[:space:]]down([[:space:]]|$)/) invalid = 1
+                sub(/;/, " down;")
+              }
+              { print }
+              END {
+                if (matches != 1 || invalid) {
+                  print "Expected exactly one active nginx upstream for port " port > "/dev/stderr"
+                  exit 1
+                }
+              }
+            ' > "$nginx_work/drained"
+            sudo chmod --reference="$nginx_work/original" "$nginx_work/drained"
+            sudo chown --reference="$nginx_work/original" "$nginx_work/drained"
+            nginx_drained=true
+            sudo cp -p "$nginx_work/drained" "$nginx_config"
+            sudo nginx -t
             sudo nginx -s reload
           fi
 
-          docker compose down ${{ inputs.docker-container-name }}
-          docker compose pull ${{ inputs.docker-container-name }}
-          docker compose up -d --force-recreate ${{ inputs.docker-container-name }}
-
-          sleep 10
-
-          if [[ -n "${{ inputs.nginx-site-config-path }}" ]]; then
-            sudo sed -i "s|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000 down;|server 127.0.0.1:${{ inputs.docker-container-port }} max_conns=2000;|" ${{ inputs.nginx-site-config-path }}
-            sudo nginx -s reload
+          backend_touched=true
+          docker compose up -d --no-deps --force-recreate "$service"
+          container_id=$(docker compose ps -aq "$service")
+          [[ -n "$container_id" && "$container_id" != *$'\n'* ]]
+          deadline=$((SECONDS + 60))
+          stable_since=-1
+          ready=false
+          while (( SECONDS < deadline )); do
+            state=$(docker inspect --format '{{.State.Status}} {{.RestartCount}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} {{.State.Running}}' "$container_id")
+            read -r container_status restart_count health running <<< "$state"
+            if [[ "$container_status" == exited || "$container_status" == dead || "$health" == unhealthy || "$restart_count" != 0 ]]; then
+              echo "Startup failed for $service: $state" >&2
+              exit 1
+            fi
+            if [[ "$container_status" == running && "$running" == true ]]; then
+              if (( stable_since < 0 )); then stable_since=$SECONDS; fi
+              if (( SECONDS - stable_since >= 10 )) && [[ "$health" == none || "$health" == healthy ]]; then
+                ready=true
+                break
+              fi
+            else
+              stable_since=-1
+            fi
+            sleep 1
+          done
+          if [[ "$ready" != true ]]; then
+            echo "Startup verification timed out for $service." >&2
+            exit 1
           fi
 
-          docker image prune -f
+          if [[ "$nginx_drained" == true ]]; then
+            sudo cp -p "$nginx_work/original" "$nginx_config"
+            sudo nginx -t
+            sudo nginx -s reload
+            nginx_drained=false
+          fi
+
+          docker image prune -f || echo "Warning: image pruning failed after successful deployment." >&2
+          HH_DEPLOY_SCRIPT
 
           
     ##
