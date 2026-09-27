@@ -28,6 +28,9 @@ inputs:
     required: true
 
 outputs:
+  image-digest:
+    description: "The pushed image's sha256 digest without its repository; safe to pass between jobs when the Docker Hub username is masked."
+    value: ${{ steps.build_image.outputs.image-digest }}
   image-reference:
     description: "The immutable repository@sha256 digest of the pushed image."
     value: ${{ steps.build_image.outputs.image-reference }}
@@ -125,6 +128,7 @@ runs:
         image_reference=$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$HH_IMAGE_REPOSITORY:$TIMESTAMP" |
           awk -v repository="$HH_IMAGE_REPOSITORY" 'index($0, repository "@sha256:") == 1 { print; exit }')
         [[ "$image_reference" =~ @sha256:[0-9a-f]{64}$ ]]
+        echo "image-digest=${image_reference##*@}" >> "$GITHUB_OUTPUT"
         echo "image-reference=$image_reference" >> "$GITHUB_OUTPUT"
         echo "Built image: $image_reference; application revision: $application_revision; Common revision: $common_revision"
 

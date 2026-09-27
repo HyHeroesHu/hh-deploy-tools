@@ -73,11 +73,23 @@ docker() {
     def test_build_publishes_digest_and_source_revisions(self):
         result = self.run_fixture()
         self.assertEqual(result["status"], 0, result["output"])
-        self.assertEqual(result["outputs"], "image-reference=fixture/image@sha256:" + "0" * 64 + "\n")
+        digest = "sha256:" + "0" * 64
+        self.assertEqual(result["outputs"], "image-digest=" + digest + "\nimage-reference=fixture/image@" + digest + "\n")
         self.assertIn("org.opencontainers.image.revision=app-commit", result["commands"])
         self.assertIn("hu.hyheroes.common.revision=common-commit", result["commands"])
         self.assertIn("-t fixture/image:123 -t fixture/image:latest", result["commands"])
         self.assertIn("push fixture/image:123\npush fixture/image:latest", result["commands"])
+
+    def test_digest_handoff_survives_masked_dockerhub_username(self):
+        result = self.run_fixture()
+        self.assertEqual(result["status"], 0, result["output"])
+        outputs = dict(line.split("=", 1) for line in result["outputs"].splitlines())
+        # The runner omits job outputs whose values contain a masked secret.
+        dockerhub_username = "fixture"
+        exported = {name: value for name, value in outputs.items() if dockerhub_username not in value}
+        self.assertNotIn("image-reference", exported)
+        self.assertEqual(exported["image-digest"], "sha256:" + "0" * 64)
+        self.assertEqual("fixture/image@" + exported["image-digest"], outputs["image-reference"])
 
     def test_failed_push_cannot_publish_digest(self):
         result = self.run_fixture("push-failure")
