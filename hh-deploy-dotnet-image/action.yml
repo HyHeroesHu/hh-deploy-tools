@@ -3,6 +3,10 @@ name: "Deploy HH .NET App From Dockerhub image"
 description: "Deploying HyHeroes .NET application from dockerhub, via SSH"
 
 inputs:
+  image-reference:
+    description: "Optional repository@sha256 digest returned by the backend build action."
+    required: false
+    default: ""
   application-name:
     description: "The full name of the application"
   discord-nofity-webook-url:
@@ -89,6 +93,10 @@ runs:
           service='${{ inputs.docker-container-name }}'
           nginx_config='${{ inputs.nginx-site-config-path }}'
           port='${{ inputs.docker-container-port }}'
+          image_reference='${{ inputs.image-reference }}'
+          image_override=''
+          expected_image_id=''
+          compose_files=()
           nginx_work=''
           nginx_drained=false
           backend_touched=false
@@ -114,6 +122,9 @@ runs:
             if [[ -n "$nginx_work" && $status -eq 0 ]]; then
               rm -rf -- "$nginx_work" || echo "Warning: nginx staging cleanup failed." >&2
             fi
+            if [[ -n "$image_override" ]]; then
+              rm -f -- "$image_override" || echo "Warning: image override cleanup failed." >&2
+            fi
             exit "$status"
           }
           trap cleanup EXIT
@@ -122,7 +133,40 @@ runs:
 
           echo "${{ inputs.dockerhub-pat }}" | docker login -u "${{ inputs.dockerhub-user }}" --password-stdin
 
-          docker compose pull "$service"
+          if [[ -n "$image_reference" ]]; then
+            [[ "$service" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]
+            [[ "$image_reference" =~ ^[a-z0-9][a-z0-9._/-]*@sha256:[0-9a-f]{64}$ ]]
+            expected_repository='${{ inputs.dockerhub-namespace }}/${{ inputs.dockerhub-image-name }}'
+            [[ "$image_reference" == "$expected_repository"@sha256:* ]] || {
+              echo "Built image repository does not match the deployment inputs." >&2
+              exit 1
+            }
+            [[ -f docker-compose.yml ]] || {
+              echo "Expected /srv/docker-compose.yml for digest deployment." >&2
+              exit 1
+            }
+            compose_files=(-f docker-compose.yml)
+            if [[ -f docker-compose.override.yml ]]; then
+              compose_files+=(-f docker-compose.override.yml)
+            elif [[ -f docker-compose.override.yaml ]]; then
+              compose_files+=(-f docker-compose.override.yaml)
+            fi
+            configured_services=$(docker compose "${compose_files[@]}" config --services)
+            if ! printf '%s\n' "$configured_services" | awk -v service="$service" '$0 == service { found = 1 } END { exit !found }'; then
+              echo "Service $service is absent from the server Compose configuration." >&2
+              exit 1
+            fi
+            image_override=$(mktemp "$PWD/.hh-image-override.XXXXXXXX.yml")
+            printf 'services:\n  %s:\n    image: "%s"\n' "$service" "$image_reference" > "$image_override"
+            compose_files+=(-f "$image_override")
+          fi
+          compose() { docker compose "${compose_files[@]}" "$@"; }
+          compose pull "$service"
+          if [[ -n "$image_reference" ]]; then
+            expected_image_id=$(docker image inspect --format '{{.Id}}' "$image_reference")
+            [[ -n "$expected_image_id" ]]
+            echo "Deploying image: $image_reference; image ID: $expected_image_id"
+          fi
           echo "${{ inputs.secret-env-base64 }}" | base64 --decode > .env
 
           if [[ -n "$nginx_config" ]]; then
@@ -156,9 +200,17 @@ runs:
           fi
 
           backend_touched=true
-          docker compose up -d --no-deps --force-recreate "$service"
-          container_id=$(docker compose ps -aq "$service")
+          compose up -d --no-deps --force-recreate "$service"
+          container_id=$(compose ps -aq "$service")
           [[ -n "$container_id" && "$container_id" != *$'\n'* ]]
+          if [[ -n "$image_reference" ]]; then
+            actual_image_id=$(docker inspect --format '{{.Image}}' "$container_id")
+            [[ "$actual_image_id" == "$expected_image_id" ]] || {
+              echo "Container image mismatch: expected $expected_image_id, found $actual_image_id." >&2
+              exit 1
+            }
+            docker image inspect --format 'Application revision: {{index .Config.Labels "org.opencontainers.image.revision"}}; Common revision: {{index .Config.Labels "hu.hyheroes.common.revision"}}' "$image_reference"
+          fi
           deadline=$((SECONDS + 60))
           stable_since=-1
           ready=false

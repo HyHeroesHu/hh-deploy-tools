@@ -21,6 +21,76 @@ def remote_script(action):
     return "\n".join(line[10:] for line in match[1].splitlines()).strip() + "\n"
 
 
+def backend_build_script():
+    text = (ROOT / "hh-build-dotnet-app" / "action.yml").read_text(encoding="utf-8")
+    match = re.search(r"    - name: Build and Push Docker Image\n.*?      run: \|\n((?:        [^\n]*\n|\n)+)", text, re.S)
+    if not match:
+        raise AssertionError("Backend build script not found")
+    return "\n".join(line[8:] for line in match[1].splitlines()).strip() + "\n"
+
+
+class BackendBuildTest(unittest.TestCase):
+    def run_fixture(self, scenario="success"):
+        with tempfile.TemporaryDirectory(prefix="hh-build-test-") as directory:
+            fixture = Path(directory)
+            script = r'''
+git() {
+  if [[ "$2" == HH.Backend.Common ]]; then printf 'common-commit\n';
+  else printf 'app-commit\n'; fi
+}
+docker() {
+  printf '%s\n' "$*" >> "$HH_TEST_FIXTURE/commands"
+  case "$1" in
+    push) [[ "$HH_TEST_SCENARIO" != push-failure ]] || return 7 ;;
+    image)
+      printf 'fixture/other-image@sha256:%064d\n' 0
+      if [[ "$HH_TEST_SCENARIO" != missing-digest ]]; then
+        printf 'fixture/image@sha256:%064d\n' 0
+      fi ;;
+  esac
+}
+'''
+            script += backend_build_script()
+            script_path = fixture / "fixture.sh"
+            script_path.write_text(script, encoding="utf-8", newline="\n")
+            environment = os.environ.copy()
+            environment.update({
+                "HH_TEST_FIXTURE": fixture.as_posix(),
+                "HH_TEST_SCENARIO": scenario,
+                "HH_IMAGE_REPOSITORY": "fixture/image",
+                "HH_APP_DIRECTORY": "HH.Backend.BackgroundOperator",
+                "TIMESTAMP": "123",
+                "GITHUB_OUTPUT": (fixture / "outputs").as_posix(),
+            })
+            result = subprocess.run([BASH, str(script_path)], env=environment, capture_output=True, text=True, timeout=15)
+            return {
+                "status": result.returncode,
+                "output": result.stdout + result.stderr,
+                "commands": (fixture / "commands").read_text(),
+                "outputs": (fixture / "outputs").read_text() if (fixture / "outputs").exists() else "",
+            }
+
+    def test_build_publishes_digest_and_source_revisions(self):
+        result = self.run_fixture()
+        self.assertEqual(result["status"], 0, result["output"])
+        self.assertEqual(result["outputs"], "image-reference=fixture/image@sha256:" + "0" * 64 + "\n")
+        self.assertIn("org.opencontainers.image.revision=app-commit", result["commands"])
+        self.assertIn("hu.hyheroes.common.revision=common-commit", result["commands"])
+        self.assertIn("-t fixture/image:123 -t fixture/image:latest", result["commands"])
+        self.assertIn("push fixture/image:123\npush fixture/image:latest", result["commands"])
+
+    def test_failed_push_cannot_publish_digest(self):
+        result = self.run_fixture("push-failure")
+        self.assertEqual(result["status"], 7, result["output"])
+        self.assertEqual(result["outputs"], "")
+        self.assertNotIn("image inspect", result["commands"])
+
+    def test_missing_repository_digest_cannot_report_success(self):
+        result = self.run_fixture("missing-digest")
+        self.assertNotEqual(result["status"], 0)
+        self.assertEqual(result["outputs"], "")
+
+
 STUBS = r'''
 log() { printf '%s\n' "$*" >> "$fixture/commands"; }
 flock() { log "lock $*"; }
@@ -41,12 +111,33 @@ sudo() {
 }
 docker() {
   log "docker $*"
+  if [[ "$1" == compose ]]; then
+    shift
+    while [[ "${1:-}" == -f ]]; do
+      if [[ "$2" == *'.hh-image-override.'* ]]; then
+        log "image override: $(cat "$2")"
+      fi
+      shift 2
+    done
+    set -- compose "$@"
+  fi
   case "$1 $2" in
     'login '*) cat > /dev/null ;;
     'compose pull') [[ "$scenario" != pull-failure ]] || return 7 ;;
     'compose up') [[ "$scenario" != recreate-failure ]] || return 7 ;;
     'compose ps') printf 'fixture-container\n' ;;
+    'compose config')
+      if [[ "$scenario" == missing-service ]]; then printf 'other-service\n';
+      else printf 'fixture-service\n'; fi ;;
+    'image inspect')
+      if [[ "$4" == '{{.Id}}' ]]; then printf 'sha256:built-image\n';
+      else printf 'Application revision: app-commit; Common revision: common-commit\n'; fi ;;
     'inspect --format')
+      if [[ "$3" == '{{.Image}}' ]]; then
+        if [[ "$scenario" == image-mismatch ]]; then printf 'sha256:old-image\n';
+        else printf 'sha256:built-image\n'; fi
+        return 0
+      fi
       local count=0
       [[ ! -f "$fixture/inspect-count" ]] || count=$(cat "$fixture/inspect-count")
       count=$((count + 1))
@@ -91,11 +182,12 @@ rm() {
 
 
 class DeployActionsTest(unittest.TestCase):
-    def run_fixture(self, action, scenario="success", config=None, existing=True, nginx=True):
+    def run_fixture(self, action, scenario="success", config=None, existing=True, nginx=True, image_reference=""):
         with tempfile.TemporaryDirectory(prefix="hh-deploy-test-") as directory:
             fixture = Path(directory)
             host = fixture / "host"
             host.mkdir()
+            (host / "docker-compose.yml").write_text("services:\n  fixture-service:\n    image: fixture/image:latest\n")
             production = host / "hh.webpanel"
             if existing:
                 production.mkdir()
@@ -113,6 +205,7 @@ class DeployActionsTest(unittest.TestCase):
                 "inputs.secret-env-base64": "VEVTVF9FTlY9MQo=",
                 "inputs.dockerhub-namespace": "fixture",
                 "inputs.dockerhub-image-name": "image",
+                "inputs.image-reference": image_reference,
                 "inputs.docker-image-name": "",  # Finding 1 deliberately remains unchanged.
                 "inputs.version-timestamp": "123",
                 "github.ref_name": "main",
@@ -143,6 +236,7 @@ class DeployActionsTest(unittest.TestCase):
                 "backup_names": [path.name for path in backups],
                 "staging": list(host.glob(".hh.webpanel-stage.*")),
                 "inspect_count": int((fixture / "inspect-count").read_text()) if (fixture / "inspect-count").exists() else 0,
+                "image_overrides": list(host.glob(".hh-image-override.*")),
             }
 
     def test_shell_syntax(self):
@@ -219,6 +313,51 @@ class DeployActionsTest(unittest.TestCase):
         result = self.run_fixture("hh-deploy-dotnet-image", nginx=False)
         self.assertEqual(result["status"], 0, result["output"])
         self.assertNotIn("nginx", result["commands"])
+
+    def test_backend_deploys_and_verifies_built_digest(self):
+        image = "fixture/image@sha256:" + "a" * 64
+        result = self.run_fixture("hh-deploy-dotnet-image", image_reference=image)
+        self.assertEqual(result["status"], 0, result["output"])
+        self.assertIn('image: "' + image + '"', result["commands"])
+        self.assertIn("image inspect --format {{.Id}} " + image, result["commands"])
+        self.assertIn("inspect --format {{.Image}} fixture-container", result["commands"])
+        self.assertIn("Application revision: app-commit", result["output"])
+        self.assertIn("Common revision: common-commit", result["output"])
+        self.assertEqual(result["image_overrides"], [])
+
+    def test_backend_wrong_image_cannot_report_success(self):
+        image = "fixture/image@sha256:" + "a" * 64
+        result = self.run_fixture("hh-deploy-dotnet-image", "image-mismatch", image_reference=image)
+        self.assertNotEqual(result["status"], 0)
+        self.assertIn("Container image mismatch", result["output"])
+        self.assertIn("server 127.0.0.1:5000 down;", result["config"])
+        self.assertEqual(result["image_overrides"], [])
+
+    def test_backend_rejects_wrong_repository_before_pull(self):
+        image = "fixture/wrong-image@sha256:" + "a" * 64
+        result = self.run_fixture("hh-deploy-dotnet-image", image_reference=image)
+        self.assertNotEqual(result["status"], 0)
+        self.assertIn("Built image repository does not match", result["output"])
+        self.assertNotIn("compose", result["commands"])
+        self.assertEqual(result["config"], result["original"])
+
+    def test_backend_digest_pull_failure_cleans_override(self):
+        image = "fixture/image@sha256:" + "a" * 64
+        result = self.run_fixture("hh-deploy-dotnet-image", "pull-failure", image_reference=image)
+        self.assertEqual(result["status"], 7, result["output"])
+        self.assertNotIn(" up ", result["commands"])
+        self.assertEqual(result["config"], result["original"])
+        self.assertEqual(result["image_overrides"], [])
+
+    def test_backend_digest_requires_existing_compose_service(self):
+        image = "fixture/image@sha256:" + "a" * 64
+        result = self.run_fixture("hh-deploy-dotnet-image", "missing-service", image_reference=image)
+        self.assertNotEqual(result["status"], 0)
+        self.assertIn("absent from the server Compose configuration", result["output"])
+        self.assertNotIn(" pull ", result["commands"])
+        self.assertNotIn(" up ", result["commands"])
+        self.assertEqual(result["config"], result["original"])
+        self.assertEqual(result["image_overrides"], [])
 
     def test_webpanel_failures_preserve_live_site(self):
         for scenario in ("pull-failure", "copy-failure", "missing-index", "copy-cleanup-failure"):
